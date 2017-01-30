@@ -83,7 +83,7 @@
 
 Option Explicit
 
-Dim ty, webProto, server, webServer, webPort, basePath
+Dim ty, webProto, server, webServer, webPort, basePath, hostwrite
 Dim user, userPw, authName, nagiosDateFormat, proxyAddress
 Dim storeDowntimeIds, downtimePath, downtimeId, downtimeType, downtimeDuration
 Dim downtimeComment, debug, version, ignoreCertProblems, evtlog
@@ -121,6 +121,8 @@ userPw = "nagiosadmin"
 ' Name of authentication realm, set in the Nagios .htaccess file
 ' (example: "Nagios Access")
 authName = "Nagios Access"
+'Sets how the hostname is submittet to nagios if not set via param 1=UpperCase 2=Lowercase
+hostwrite = 1
 
 '
 ' Nagios CGI specific options
@@ -345,7 +347,12 @@ End If
 If hostname = "" Then
     ' Read the hostname
     Set oNetwork = WScript.CreateObject("WScript.Network")
-    hostname = LCase(oNetwork.ComputerName)
+    Select Case hostwrite
+	case 1 
+		hostname = UCase(oNetwork.ComputerName)
+	case 2 
+		hostname = Lcase(oNetwork.ComputerName)	
+	end select
 End If
 
 ' When no nagios webserver is set the webserver and Nagios should be on the same
@@ -464,6 +471,8 @@ Select Case mode
                         log EVENTLOG_INFORMATION, "Downtime IDs are not set to be stored"
                         WScript.Quit(1)
                     End If
+		ElseIf InStr(oBrowser.ResponseText, get_msg("not_authorized to commit the specified command")) > 0 Then
+			err "Maybe wrong Hostname: "&hostname&" (case Sensitive)"
                 ElseIf InStr(oBrowser.ResponseText, get_msg("not_authorized")) > 0 Then
                     err "Maybe not authorized or wrong host- or servicename"
 
